@@ -9,6 +9,10 @@
 #include "czmq.h"
 #include "zchat_client.h"
 
+int main() 
+{
+    zchat::run_client("tcp://localhost:5570", "Bob");
+}
 
 //static void *
 //client_task (void *args)
@@ -77,20 +81,6 @@
 //    zctx_destroy (&ctx);
 //    return NULL;
 //}
-
-int main() 
-{
-   // client_task(NULL);
-//        zthread_new (client_task, NULL);
-//        sleep(60);
-//        zthread_new (client_task, NULL);
-        //zthread_new (client_task, NULL);
-       // while(true){}
-       
-       zchat_client_main();
-}
-
-
 
 
 

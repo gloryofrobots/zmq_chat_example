@@ -3,58 +3,51 @@
 #include "czmq.h"
 #include "zmqhelpers.h"
 
-
 //Asynchronous zchat_server. USE DEALER AND ROUTER
 
-
-#include "czmq.h"
-#include "zmqhelpers.h"
-// This is our client task
-// It connects to the server, and then sends a request once per second
-// It collects responses as they arrive, and it prints them out. We will
-// run several client tasks in parallel, each with a different random ID.
 namespace zchat
 {
-    struct zchat_client_state
+    struct server_state
     {
+        zctx_t* context;
         const char * server_url;
     };
     
-    zchat_client_state* init_state()
+    server_state* init_state(const char * server_url)
     {
         srand(time(0));
-        zchat_client_state * state = (zchat_client_state *) malloc(sizeof(zchat_client_state));
-        // Set random identity to make tracing easier
-        state->server_url = "tcp://localhost:5570";
+        server_state * state = (server_state *) malloc(sizeof(server_state));
+        state->context = zctx_new ();
+        state->server_url = server_url;
     }
     
-    void destroy_state(zchat_client_state* state)
+    void destroy_state(server_state* state)
     {
+        zctx_destroy(&state->context);
         free(state);
     }
-
-
-
-   
+    
     static void server_worker (void *args, zctx_t *ctx, void *pipe);
     
     void *server_task (void *args)
     {
+        server_state * state = (server_state*) args;
+        
         // Frontend socket talks to clients over TCP
-        zctx_t *ctx = zctx_new ();
-        void *frontend = zsocket_new (ctx, ZMQ_ROUTER);
-        zsocket_bind (frontend, "tcp://*:5570");
+        
+        void *frontend = zsocket_new (state->context, ZMQ_ROUTER);
+        zsocket_bind (frontend, state->server_url);
         int mandatory = 1;
         zmq_setsockopt(frontend,ZMQ_ROUTER_MANDATORY, &mandatory, sizeof(mandatory));
         
         // Backend socket talks to workers over inproc
-        void *backend = zsocket_new (ctx, ZMQ_DEALER);
+        void *backend = zsocket_new (state->context, ZMQ_DEALER);
         zsocket_bind (backend, "inproc://backend");
         
         // Launch pool of worker threads, precise number is not critical
         int thread_nbr;
         for (thread_nbr = 0; thread_nbr < 1; thread_nbr++)
-            zthread_fork (ctx, server_worker, NULL);
+            zthread_fork (state->context, server_worker, NULL);
         
         // Connect backend to frontend via a proxy
         //zmq_proxy (frontend, backend, NULL);
@@ -89,12 +82,12 @@ namespace zchat
                     zmq_msg_init (&message);
                     zmq_msg_recv (&message, backend, 0);
                     int more = zmq_msg_more (&message);
-                   
+                    
                     int rc = zmq_msg_send (&message, frontend, more? ZMQ_SNDMORE: 0);
                     if(rc != 0)
                     {
                         if(errno == EHOSTUNREACH)
-                             zmqlog("zmq_msg_send");
+                            zmqlog("zmq_msg_send");
                     }
                     zmq_msg_close (&message);
                     if (!more)
@@ -105,7 +98,6 @@ namespace zchat
         
         zmq_close (frontend);
         zmq_close (backend);
-        zctx_destroy (&ctx);
         return NULL;
     }
     
@@ -142,14 +134,11 @@ namespace zchat
     // The main thread simply starts several clients and a server, and then
     // waits for the server to finish.
     
-    void async (void)
+    void run_server (const char * server_url)
     {
-//        zthread_new (client_task, NULL);
-//        zthread_new (client_task, NULL);
-//        zthread_new (client_task, NULL);
-//        zthread_new (server_task, NULL);
+        server_state * state = init_state(server_url);
         server_task(0);
-        //zclock_sleep (5 * 1000); // Run for 5 seconds then quit
+        destroy_state(state);
     }
     
 }

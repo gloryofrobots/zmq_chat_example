@@ -33,7 +33,7 @@ int main()
 //    std::cout << "id: " << message2.id() << std::endl;
 //    std::cout << "type: " << message2.type() << std::endl;
 //    chat::async();
-    zchat::async();
+    zchat::run_server("tcp://*:5570");
     return 0;
 }
 
