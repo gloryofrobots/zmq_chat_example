@@ -5,11 +5,27 @@
 #define LINE_SIZE 255
 #define IDENTITY_SIZE 20
 
-struct zchat_state
+struct zchat_client_state
 {
+    zctx_t* context;
     char identity[IDENTITY_SIZE];
     const char * server_url;
 };
+
+zchat_client_state* init_state()
+{
+    srand(time(0));
+    zchat_client_state * state = (zchat_client_state *) malloc(sizeof(zchat_client_state));
+    // Set random identity to make tracing easier
+    sprintf (state->identity, "%04X-%04X", randof (0x10000), randof (0x10000));
+    state->server_url = "tcp://localhost:5570";
+}
+
+void destroy_state(zchat_client_state* state)
+{
+    free(state);
+}
+
 
 void get_line(char * input, int size)
 {
@@ -19,7 +35,7 @@ void get_line(char * input, int size)
     {
         if(*temp == '\n')
         {
-            temp = '\0';
+            *temp = '\0';
             break;
         }
         
@@ -30,7 +46,7 @@ void get_line(char * input, int size)
 static void 
 worker_task (void *args, zctx_t *ctx, void *pipe)
 {
-    zchat_state* state = (zchat_state*) args;
+    zchat_client_state* state = (zchat_client_state*) args;
 
     void *worker = zsocket_new (ctx, ZMQ_DEALER);
     zsocket_connect (worker, "inproc://backend");
@@ -44,14 +60,13 @@ worker_task (void *args, zctx_t *ctx, void *pipe)
         printf("sending %s \n", input);
         
         //zframe_t* identity = zframe_new (state->identity, IDENTITY_SIZE);
-        zframe_t* identity = zframe_new ("AA", 2);
         zframe_t* content = zframe_new (input, LINE_SIZE);
         
         zclock_sleep (randof (1000) + 1);
-        zframe_send (&identity, worker, ZFRAME_REUSE + ZFRAME_MORE);
+        //zframe_send (&identity, worker, ZFRAME_REUSE + ZFRAME_MORE);
         zframe_send (&content, worker, ZFRAME_REUSE);
         
-        zframe_destroy (&identity);
+        //zframe_destroy (&identity);
         zframe_destroy (&content);
     }
 }
@@ -64,37 +79,23 @@ worker_task (void *args, zctx_t *ctx, void *pipe)
 //    z_
 //}
 
-zchat_state* init_state()
-{
-    srand(time(0));
-    zchat_state * state = (zchat_state *) malloc(sizeof(zchat_state));
-    // Set random identity to make tracing easier
-    sprintf (state->identity, "%04X-%04X", randof (0x10000), randof (0x10000));
-    state->server_url = "tcp://localhost:5570";
-}
-
-void destroy_state(zchat_state* state)
-{
-    free(state);
-}
-
 
 static void *
 client_task (void *args)
 {
-    zchat_state* state = (zchat_state*) args;
+    zchat_client_state* state = (zchat_client_state*) args;
     
-    zctx_t *ctx = zctx_new ();
+    state->context = zctx_new ();
     
     
-    void *frontend = zsocket_new (ctx, ZMQ_DEALER);
+    void *frontend = zsocket_new (state->context, ZMQ_DEALER);
     zsocket_set_identity (frontend, state->identity);
     zsocket_connect (frontend,state->server_url);
     
-    void *backend = zsocket_new (ctx, ZMQ_DEALER);
+    void *backend = zsocket_new (state->context, ZMQ_DEALER);
     zsocket_bind (backend, "inproc://backend");
     
-    zthread_fork (ctx, worker_task, state);
+    zthread_fork (state->context, worker_task, state);
      
     zmq_pollitem_t items [] = { { frontend, 0, ZMQ_POLLIN, 0 },
                                 { backend, 0, ZMQ_POLLIN, 0 } };
@@ -120,9 +121,11 @@ client_task (void *args)
                 //zmq_msg_send (&message, backend, more? ZMQ_SNDMORE: 0);
                 
                 
+                char * data = (char *) zmq_msg_data(&message);
+                zmq_msg_close (&message);
                 if (!more){
-                    printf("MESSAGE IS %s\n", (char*) zmq_msg_data(&message));  
-                    zmq_msg_close (&message);  
+                    printf("MESSAGE IS %s\n", data);  
+                      
                      break; // Last message part
                      }              
             //zmsg_t *msg = zmsg_recv (frontend);
@@ -149,14 +152,15 @@ client_task (void *args)
             }
         }
     }
-    zctx_destroy (&ctx);
+    zctx_destroy (&state->context);
     return NULL;
 }
 void zchat_client_main()
 {
-    zchat_state * state = init_state();
+    zchat_client_state * state = init_state();
    
     client_task(state);
+    ECHO("DESTROYED");
     destroy_state(state);
 }
 

@@ -1,0 +1,11 @@
+message Message {
+  enum MessageType {
+    HEARTBEAT = 0;
+    MESSAGE = 1;
+  }
+
+  required MessageType type = 1;
+  required int32 id = 2;
+  optional string login = 3;
+  optional string value = 4;
+}

@@ -1,13 +1,12 @@
 #include <iostream>
+#include <fstream>
 #include "zmqhelpers.h"
-#include "SimpleLogger.h"
-#include "LogSystem.h"
 #include "types.h"
 #include <pthread.h>
 #include <vector>
-#include "ex.h"
-#include "async.h"
-#include "async2.h"
+
+
+#include "zchat_server.h"
 typedef std::vector<void *> TVectorWorker;
 
 
@@ -21,7 +20,20 @@ int main()
     
     void *context = zmq_ctx_new ();
     //req_router(context);
-    chat::async();
+    
+//    Message message;
+//    message.set_id(1234);
+//    message.set_type(Message_MessageType_HEARTBEAT);
+//    std::fstream output("myfile", std::ios::out | std::ios::binary | std::ios::trunc);
+//    message.SerializeToOstream(&output);
+//    output.close();
+//    std::fstream input("myfile", std::ios::in | std::ios::binary);
+//    Message message2;
+//    message2.ParseFromIstream(&input);
+//    std::cout << "id: " << message2.id() << std::endl;
+//    std::cout << "type: " << message2.type() << std::endl;
+//    chat::async();
+    zchat::async();
     return 0;
 }
 

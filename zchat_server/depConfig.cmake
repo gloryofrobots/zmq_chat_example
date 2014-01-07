@@ -2,9 +2,17 @@
 
 SET ( ZEROMQ_FIND_REQUIRED TRUE )
 
-    
+## PROTOBUF
+
+find_package(Protobuf)
+if(PROTOBUF_FOUND)
+ MESSAGE ( STATUS "Found Protobuf:" )
+endif(PROTOBUF_FOUND)
+
 ### ZeroMQ ###
-    
+   
+FIND_LIBRARY ( PROTOBUF_LIBRARY NAMES protobuf PATHS /usr/lib /usr/local/lib )
+ 
 FIND_PATH ( ZEROMQ_INCLUDE_DIR NAMES zmq.h PATHS /usr/include/ /usr/local/include/ )
 FIND_LIBRARY ( ZEROMQ_LIBRARY NAMES zmq PATHS /usr/lib /usr/local/lib )
 
