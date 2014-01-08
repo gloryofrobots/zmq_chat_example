@@ -19,6 +19,7 @@ namespace zchat
         server_state * state = (server_state *) malloc(sizeof(server_state));
         state->context = zctx_new ();
         state->server_url = server_url;
+        return state;
     }
     
     void destroy_state(server_state* state)
@@ -137,7 +138,7 @@ namespace zchat
     void run_server (const char * server_url)
     {
         server_state * state = init_state(server_url);
-        server_task(0);
+        server_task(state);
         destroy_state(state);
     }
     

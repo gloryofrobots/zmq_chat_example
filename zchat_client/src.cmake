@@ -3,6 +3,7 @@
 set(zchat_client_SOURCES 
     "main.cpp"
     "zchat_client.h"
+    "zchat_client.cpp"
     #"Client.cpp"
     #"Subscriber.cpp"
     #"SubscriberZMQ.cpp"

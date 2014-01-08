@@ -43,7 +43,7 @@ void zmqlog(const char * msg)
 }
 
 #define ECHO(s) printf("%s\n",s)
-#define ECHO2(s1,s2) printf("%s %s\n",s1,s2)
+#define ECHO_2_STR(s1,s2) printf("%s %s\n",s1,s2)
 
 // Receive 0MQ string from socket and convert into C string
 // Caller must free returned string. Returns NULL if the context

@@ -1,17 +1,11 @@
-
 #include <iostream>
 #include <fstream>
-#include <string>
 
-#include "zmqhelpers.h"
-
-#include <pthread.h>
-#include "czmq.h"
 #include "zchat_client.h"
 
 int main() 
 {
-    zchat::run_client("tcp://localhost:5570", "Bob");
+    zchat_client_run("tcp://localhost:5570", "Bob");
 }
 
 //static void *

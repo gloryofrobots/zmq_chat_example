@@ -34,11 +34,13 @@ class Message;
 
 enum Message_MessageType {
   Message_MessageType_HEARTBEAT = 0,
-  Message_MessageType_MESSAGE = 1
+  Message_MessageType_MESSAGE = 1,
+  Message_MessageType_RESPONSE = 2,
+  Message_MessageType_CONTACTS = 3
 };
 bool Message_MessageType_IsValid(int value);
 const Message_MessageType Message_MessageType_MessageType_MIN = Message_MessageType_HEARTBEAT;
-const Message_MessageType Message_MessageType_MessageType_MAX = Message_MessageType_MESSAGE;
+const Message_MessageType Message_MessageType_MessageType_MAX = Message_MessageType_CONTACTS;
 const int Message_MessageType_MessageType_ARRAYSIZE = Message_MessageType_MessageType_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* Message_MessageType_descriptor();
@@ -108,6 +110,8 @@ class Message : public ::google::protobuf::Message {
   typedef Message_MessageType MessageType;
   static const MessageType HEARTBEAT = Message_MessageType_HEARTBEAT;
   static const MessageType MESSAGE = Message_MessageType_MESSAGE;
+  static const MessageType RESPONSE = Message_MessageType_RESPONSE;
+  static const MessageType CONTACTS = Message_MessageType_CONTACTS;
   static inline bool MessageType_IsValid(int value) {
     return Message_MessageType_IsValid(value);
   }
@@ -138,28 +142,17 @@ class Message : public ::google::protobuf::Message {
   inline ::Message_MessageType type() const;
   inline void set_type(::Message_MessageType value);
   
-  // required int32 id = 2;
-  inline bool has_id() const;
-  inline void clear_id();
-  static const int kIdFieldNumber = 2;
-  inline ::google::protobuf::int32 id() const;
-  inline void set_id(::google::protobuf::int32 value);
+  // required int32 incoming_id = 2;
+  inline bool has_incoming_id() const;
+  inline void clear_incoming_id();
+  static const int kIncomingIdFieldNumber = 2;
+  inline ::google::protobuf::int32 incoming_id() const;
+  inline void set_incoming_id(::google::protobuf::int32 value);
   
-  // optional string login = 3;
-  inline bool has_login() const;
-  inline void clear_login();
-  static const int kLoginFieldNumber = 3;
-  inline const ::std::string& login() const;
-  inline void set_login(const ::std::string& value);
-  inline void set_login(const char* value);
-  inline void set_login(const char* value, size_t size);
-  inline ::std::string* mutable_login();
-  inline ::std::string* release_login();
-  
-  // optional string value = 4;
+  // optional string value = 3;
   inline bool has_value() const;
   inline void clear_value();
-  static const int kValueFieldNumber = 4;
+  static const int kValueFieldNumber = 3;
   inline const ::std::string& value() const;
   inline void set_value(const ::std::string& value);
   inline void set_value(const char* value);
@@ -167,26 +160,51 @@ class Message : public ::google::protobuf::Message {
   inline ::std::string* mutable_value();
   inline ::std::string* release_value();
   
+  // optional string sender = 4;
+  inline bool has_sender() const;
+  inline void clear_sender();
+  static const int kSenderFieldNumber = 4;
+  inline const ::std::string& sender() const;
+  inline void set_sender(const ::std::string& value);
+  inline void set_sender(const char* value);
+  inline void set_sender(const char* value, size_t size);
+  inline ::std::string* mutable_sender();
+  inline ::std::string* release_sender();
+  
+  // optional string receiver = 5;
+  inline bool has_receiver() const;
+  inline void clear_receiver();
+  static const int kReceiverFieldNumber = 5;
+  inline const ::std::string& receiver() const;
+  inline void set_receiver(const ::std::string& value);
+  inline void set_receiver(const char* value);
+  inline void set_receiver(const char* value, size_t size);
+  inline ::std::string* mutable_receiver();
+  inline ::std::string* release_receiver();
+  
   // @@protoc_insertion_point(class_scope:Message)
  private:
   inline void set_has_type();
   inline void clear_has_type();
-  inline void set_has_id();
-  inline void clear_has_id();
-  inline void set_has_login();
-  inline void clear_has_login();
+  inline void set_has_incoming_id();
+  inline void clear_has_incoming_id();
   inline void set_has_value();
   inline void clear_has_value();
+  inline void set_has_sender();
+  inline void clear_has_sender();
+  inline void set_has_receiver();
+  inline void clear_has_receiver();
   
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
   
   int type_;
-  ::google::protobuf::int32 id_;
-  ::std::string* login_;
+  ::google::protobuf::int32 incoming_id_;
   ::std::string* value_;
+  ::std::string* sender_;
+  ::std::string* receiver_;
   
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(4 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(5 + 31) / 32];
   
   friend void  protobuf_AddDesc_message_2eproto();
   friend void protobuf_AssignDesc_message_2eproto();
@@ -225,95 +243,37 @@ inline void Message::set_type(::Message_MessageType value) {
   type_ = value;
 }
 
-// required int32 id = 2;
-inline bool Message::has_id() const {
+// required int32 incoming_id = 2;
+inline bool Message::has_incoming_id() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
-inline void Message::set_has_id() {
+inline void Message::set_has_incoming_id() {
   _has_bits_[0] |= 0x00000002u;
 }
-inline void Message::clear_has_id() {
+inline void Message::clear_has_incoming_id() {
   _has_bits_[0] &= ~0x00000002u;
 }
-inline void Message::clear_id() {
-  id_ = 0;
-  clear_has_id();
+inline void Message::clear_incoming_id() {
+  incoming_id_ = 0;
+  clear_has_incoming_id();
 }
-inline ::google::protobuf::int32 Message::id() const {
-  return id_;
+inline ::google::protobuf::int32 Message::incoming_id() const {
+  return incoming_id_;
 }
-inline void Message::set_id(::google::protobuf::int32 value) {
-  set_has_id();
-  id_ = value;
+inline void Message::set_incoming_id(::google::protobuf::int32 value) {
+  set_has_incoming_id();
+  incoming_id_ = value;
 }
 
-// optional string login = 3;
-inline bool Message::has_login() const {
+// optional string value = 3;
+inline bool Message::has_value() const {
   return (_has_bits_[0] & 0x00000004u) != 0;
 }
-inline void Message::set_has_login() {
+inline void Message::set_has_value() {
   _has_bits_[0] |= 0x00000004u;
 }
-inline void Message::clear_has_login() {
-  _has_bits_[0] &= ~0x00000004u;
-}
-inline void Message::clear_login() {
-  if (login_ != &::google::protobuf::internal::kEmptyString) {
-    login_->clear();
-  }
-  clear_has_login();
-}
-inline const ::std::string& Message::login() const {
-  return *login_;
-}
-inline void Message::set_login(const ::std::string& value) {
-  set_has_login();
-  if (login_ == &::google::protobuf::internal::kEmptyString) {
-    login_ = new ::std::string;
-  }
-  login_->assign(value);
-}
-inline void Message::set_login(const char* value) {
-  set_has_login();
-  if (login_ == &::google::protobuf::internal::kEmptyString) {
-    login_ = new ::std::string;
-  }
-  login_->assign(value);
-}
-inline void Message::set_login(const char* value, size_t size) {
-  set_has_login();
-  if (login_ == &::google::protobuf::internal::kEmptyString) {
-    login_ = new ::std::string;
-  }
-  login_->assign(reinterpret_cast<const char*>(value), size);
-}
-inline ::std::string* Message::mutable_login() {
-  set_has_login();
-  if (login_ == &::google::protobuf::internal::kEmptyString) {
-    login_ = new ::std::string;
-  }
-  return login_;
-}
-inline ::std::string* Message::release_login() {
-  clear_has_login();
-  if (login_ == &::google::protobuf::internal::kEmptyString) {
-    return NULL;
-  } else {
-    ::std::string* temp = login_;
-    login_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
-    return temp;
-  }
-}
-
-// optional string value = 4;
-inline bool Message::has_value() const {
-  return (_has_bits_[0] & 0x00000008u) != 0;
-}
-inline void Message::set_has_value() {
-  _has_bits_[0] |= 0x00000008u;
-}
 inline void Message::clear_has_value() {
-  _has_bits_[0] &= ~0x00000008u;
+  _has_bits_[0] &= ~0x00000004u;
 }
 inline void Message::clear_value() {
   if (value_ != &::google::protobuf::internal::kEmptyString) {
@@ -359,6 +319,122 @@ inline ::std::string* Message::release_value() {
   } else {
     ::std::string* temp = value_;
     value_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+
+// optional string sender = 4;
+inline bool Message::has_sender() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void Message::set_has_sender() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void Message::clear_has_sender() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void Message::clear_sender() {
+  if (sender_ != &::google::protobuf::internal::kEmptyString) {
+    sender_->clear();
+  }
+  clear_has_sender();
+}
+inline const ::std::string& Message::sender() const {
+  return *sender_;
+}
+inline void Message::set_sender(const ::std::string& value) {
+  set_has_sender();
+  if (sender_ == &::google::protobuf::internal::kEmptyString) {
+    sender_ = new ::std::string;
+  }
+  sender_->assign(value);
+}
+inline void Message::set_sender(const char* value) {
+  set_has_sender();
+  if (sender_ == &::google::protobuf::internal::kEmptyString) {
+    sender_ = new ::std::string;
+  }
+  sender_->assign(value);
+}
+inline void Message::set_sender(const char* value, size_t size) {
+  set_has_sender();
+  if (sender_ == &::google::protobuf::internal::kEmptyString) {
+    sender_ = new ::std::string;
+  }
+  sender_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* Message::mutable_sender() {
+  set_has_sender();
+  if (sender_ == &::google::protobuf::internal::kEmptyString) {
+    sender_ = new ::std::string;
+  }
+  return sender_;
+}
+inline ::std::string* Message::release_sender() {
+  clear_has_sender();
+  if (sender_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = sender_;
+    sender_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    return temp;
+  }
+}
+
+// optional string receiver = 5;
+inline bool Message::has_receiver() const {
+  return (_has_bits_[0] & 0x00000010u) != 0;
+}
+inline void Message::set_has_receiver() {
+  _has_bits_[0] |= 0x00000010u;
+}
+inline void Message::clear_has_receiver() {
+  _has_bits_[0] &= ~0x00000010u;
+}
+inline void Message::clear_receiver() {
+  if (receiver_ != &::google::protobuf::internal::kEmptyString) {
+    receiver_->clear();
+  }
+  clear_has_receiver();
+}
+inline const ::std::string& Message::receiver() const {
+  return *receiver_;
+}
+inline void Message::set_receiver(const ::std::string& value) {
+  set_has_receiver();
+  if (receiver_ == &::google::protobuf::internal::kEmptyString) {
+    receiver_ = new ::std::string;
+  }
+  receiver_->assign(value);
+}
+inline void Message::set_receiver(const char* value) {
+  set_has_receiver();
+  if (receiver_ == &::google::protobuf::internal::kEmptyString) {
+    receiver_ = new ::std::string;
+  }
+  receiver_->assign(value);
+}
+inline void Message::set_receiver(const char* value, size_t size) {
+  set_has_receiver();
+  if (receiver_ == &::google::protobuf::internal::kEmptyString) {
+    receiver_ = new ::std::string;
+  }
+  receiver_->assign(reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* Message::mutable_receiver() {
+  set_has_receiver();
+  if (receiver_ == &::google::protobuf::internal::kEmptyString) {
+    receiver_ = new ::std::string;
+  }
+  return receiver_;
+}
+inline ::std::string* Message::release_receiver() {
+  clear_has_receiver();
+  if (receiver_ == &::google::protobuf::internal::kEmptyString) {
+    return NULL;
+  } else {
+    ::std::string* temp = receiver_;
+    receiver_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
     return temp;
   }
 }
