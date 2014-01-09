@@ -4,6 +4,7 @@
 #include <fstream>
 #include <cstdlib>
 #include "zchat_client.h"
+//protoc -I=. --cpp_out=. zchat_message.proto
 
 int main(int argc, char **argv) 
 {
@@ -14,7 +15,7 @@ int main(int argc, char **argv)
    
     srand(time(0));
     char login[20] = {'\0'};
-    sprintf (login, "%04X-%04X-%04X-%04X", randof (0x10000), randof (0x10000),randof (0x10000),randof (0x10000));
+    sprintf (login, "%04X%04X%04X%04X", randof (0x10000), randof (0x10000),randof (0x10000),randof (0x10000));
    
     zchat_client_run("tcp://localhost:5570", login);
 }

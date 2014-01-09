@@ -5,11 +5,23 @@
 
 typedef  std::vector<zchat_message*> zchat_message_vector_t;
 ///////////////////////////////////////////
+zchat_message * zchat_message_new()
+{
+    return new zchat_message();
+}
+///////////////////////////////////////////
+void zchat_message_destroy(zchat_message * message)
+{
+    delete message;
+}
+///////////////////////////////////////////
 zchat_message * zchat_message_deserialize_from_zmq_msg(zmq_msg_t* zmessage)
 {
-    zchat_message* message = new zchat_message();
-    char * data = (char *) zmq_msg_data(zmessage);
-    message->ParseFromArray(data, strlen(data));
+    int size = zmq_msg_size(zmessage);
+    void * data = zmq_msg_data(zmessage);
+    
+    zchat_message* message = zchat_message_new();
+    message->ParseFromArray(data, size);
     return message;
 }
 ///////////////////////////////////////////
@@ -20,11 +32,6 @@ zchat_message * zchat_message_deserialize_from_zframe(zframe_t *content)
     size_t size = zframe_size(content);
     message->ParseFromArray(data, size);
     return message;
-}
-///////////////////////////////////////////
-void zchat_message_destroy(zchat_message * message)
-{
-    delete message;
 }
 ///////////////////////////////////////////
 #endif

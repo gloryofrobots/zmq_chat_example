@@ -7,12 +7,17 @@
 #include "zchat_client.h"
 #include "zchat_message.h"
 #include "zchat_types.h"
+#include "utils.h"
+
 #include <list>
 #include <vector>
 #define LINE_SIZE 255
 #define IDENTITY_SIZE 20
 
-
+#define HEARTBEAT_LIVENESS 3 // 3-5 is reasonable
+#define HEARTBEAT_INTERVAL 1000 // msecs
+#define HEARTBEAT_INTERVAL_INIT 1000 // Initial reconnect
+#define HEARTBEAT_INTERVAL_MAX 32000 
 
 /////////////////////////////////////////////////////////////////////
 struct client_state
@@ -21,37 +26,69 @@ struct client_state
     char identity[IDENTITY_SIZE];
     const char * server_url;
     const char * login;
-    zchat_message_vector_t* in_messages;
-    zchat_message_vector_t* out_messages;
+    zchat_message_vector_t in_messages;
+    zchat_message_vector_t out_messages;
+    zchat_vector_string_t users;
     
+    size_t heartbeat_liveness;
+    size_t heartbeat_interval;
+    size_t heartbeat_interval_init;
+    size_t heartbeat_interval_max;
+    uint64_t heartbeat_time;
     int last_message_id;
 };
+void client_state_reset_heartbeat(client_state* state);
 /////////////////////////////////////////////////////////////////////
-client_state* init_state(const char* server_url, const char* login)
+client_state* client_state_init(const char* server_url, const char* login)
 {
     srand(time(0));
-    client_state * state = (client_state *) malloc(sizeof(client_state));
+    client_state * state = new client_state();
     state->last_message_id = 0;
     state->context = zctx_new ();
     state->login = login;
-    state->in_messages = new zchat_message_vector_t();
-    state->out_messages = new zchat_message_vector_t();
+    
     // Set random identity to make tracing easier
     sprintf (state->identity, "%04X-%04X", randof (0x10000), randof (0x10000));
-    state->server_url = server_url;
-    return state;
     
+    state->server_url = server_url;
+    
+    client_state_reset_heartbeat(state);
+    return state;
 }
 /////////////////////////////////////////////////////////////////////
-void destroy_state(client_state* state)
+void client_state_destroy(client_state* state)
 {
     ECHO("DESTROYED");
     zctx_destroy (&state->context);
-    delete state->in_messages;
-    delete state->out_messages;
-    free(state);
+    delete state;
 }
-
+/////////////////////////////////////////////////////////////////////
+void client_state_reset_heartbeat(client_state* state)
+{
+    state->heartbeat_liveness = HEARTBEAT_LIVENESS;
+    state->heartbeat_interval_max = HEARTBEAT_INTERVAL_MAX;
+    state->heartbeat_interval_init = HEARTBEAT_INTERVAL_INIT;
+    state->heartbeat_interval = HEARTBEAT_INTERVAL;  
+}
+/////////////////////////////////////////////////////////////////////
+void client_state_set_heartbeat_time(client_state* state)
+{
+    state->heartbeat_time =  zclock_time () + state->heartbeat_interval;     
+}
+/////////////////////////////////////////////////////////////////////
+bool client_state_is_time_to_heartbeat(client_state* state)
+{
+    return zclock_time() > state->heartbeat_interval;
+}
+/////////////////////////////////////////////////////////////////////
+zchat_message * zchat_message_new_for_sender(client_state* state, zchat_message_message_type type)
+{
+    zchat_message* message = zchat_message_new();
+    message->set_type(type);
+    message->set_sender(state->login);
+    message->set_incoming_id(++state->last_message_id);
+}
+/////////////////////////////////////////////////////////////////////
 //FGETS without line separator    
 void get_line(char * input, int size)
 {
@@ -68,30 +105,23 @@ void get_line(char * input, int size)
         temp++;
     }    
 }
-
-static void
-set_message_id(client_state* state, zchat_message& message)
-{
-    message.set_incoming_id(++state->last_message_id);
-    //state->last_message_id++;
-}
-
+/////////////////////////////////////////////////////////////////////
 static void
 serialize_message_to_string(zchat_message * message, zchat_string_t* out)
 {
     message->SerializeToString(out);
 }
-
+/////////////////////////////////////////////////////////////////////
 void send_outgoing_messages(client_state* state, void * socket)
 {
-    
     for(zchat_message_vector_t::iterator 
-        it = state->out_messages->begin();
-        it != state->out_messages->end();
+        it = state->out_messages.begin();
+        it != state->out_messages.end();
         it++)
     {
         zchat_string_t serialised;
         zchat_message * message = *it;
+        
         serialize_message_to_string(message, &serialised);
         zframe_t* content = zframe_new (serialised.c_str(),
                                         serialised.length());
@@ -99,61 +129,81 @@ void send_outgoing_messages(client_state* state, void * socket)
         zclock_sleep (randof (1000) + 1);
         
         zframe_send (&content, socket, ZFRAME_REUSE);
-        zframe_destroy (&content);
+        if(message->type() == zchat_message_message_type_PING)
+        {
+            client_state_set_heartbeat_time(state);
+        }
         
-        /*ECHO("SENDING");
-                int rc = zmq_msg_send (&zmessage, frontend, more? ZMQ_SNDMORE: 0);
-                if(rc == -1)
-                {
-                    zmqlog("zmq_msg_send");
-                }*/
+        zframe_destroy (&content);
+        zchat_message_destroy(message);
     }
     
-    state->out_messages->clear();
+    state->out_messages.clear();
 }
 /////////////////////////////////////////////////////////////////////
 void add_outgoing_message(client_state* state, zchat_message * message)
 {
-    state->out_messages->push_back(message);
+    state->out_messages.push_back(message);
 }
 /////////////////////////////////////////////////////////////////////
 void add_incoming_message(client_state* state, zchat_message * message)
 {
-    state->in_messages->push_back(message);
+    state->in_messages.push_back(message);
 }
 /////////////////////////////////////////////////////////////////////
 void process_backend_message(client_state* state, zmq_msg_t* zmessage)
 {
     zchat_message * message = zchat_message_deserialize_from_zmq_msg(zmessage);
     add_outgoing_message(state, message);
-    ECHO_2_STR("process_backend_message", message->ShortDebugString().c_str());
-    
+    //ECHO_2_STR("process_backend_message", message->ShortDebugString().c_str());
 }
 /////////////////////////////////////////////////////////////////////
 void process_frontend_message(client_state* state, zmq_msg_t* zmessage)
 {
     zchat_message * message = zchat_message_deserialize_from_zmq_msg(zmessage);
     add_incoming_message(state, message);
-    ECHO_2_STR("process_frontend_message", message->ShortDebugString().c_str());
+    //ECHO_2_STR("process_frontend_message", message->ShortDebugString().c_str());
 }
 /////////////////////////////////////////////////////////////////////
-static void
-get_serialised_message_from_stdin(client_state* state, zchat_string_t* data)
+void process_pong_message(client_state* state, zchat_message * message)
+{
+    int size = message->users_size();
+    state->users.clear();
+    
+    for(int i = 0; i < size; i++)
+    {
+        const zchat_string_t& user = message->users(0);
+        state->users.push_back(user);
+    }
+}
+/////////////////////////////////////////////////////////////////////
+void add_ping_message(client_state* state)
+{
+    zchat_message* message = zchat_message_new_for_sender(state, zchat_message_message_type_PING);
+    add_outgoing_message(state, message);
+    state->heartbeat_liveness--;
+}
+/////////////////////////////////////////////////////////////////////
+void add_pong_message(client_state* state)
+{
+    zchat_message* message = zchat_message_new_for_sender(state, zchat_message_message_type_PONG);
+    add_outgoing_message(state, message);
+}
+/////////////////////////////////////////////////////////////////////
+static void get_serialised_message_from_stdin(client_state* state, zchat_string_t* data)
 {   
     char input[LINE_SIZE] = {'\0'};
     
     get_line(input, LINE_SIZE);
     
-    zchat_message message;
-    set_message_id(state, message);
+    zchat_message * message = zchat_message_new_for_sender(state, zchat_message_message_type_MESSAGE);
     
-    message.set_type(zchat_message_message_type_MESSAGE);
-    message.set_value(input);
+    message->set_value(input);
     //message.set_value("OLOLOLOLOLO");
-    message.set_sender(state->login);
-    message.SerializeToString(data);
-    const char * ds = message.ShortDebugString().c_str();
-    ECHO(ds);
+    message->SerializeToString(data);
+    //const char * ds = message->ShortDebugString().c_str();
+    //ECHO(ds);
+    zchat_message_destroy(message);
 }
 /////////////////////////////////////////////////////////////////////
 zframe_t* get_frame_from_stdin(client_state* state)
@@ -167,10 +217,9 @@ zframe_t* get_frame_from_stdin(client_state* state)
     return content;
 }
 /////////////////////////////////////////////////////////////////////
-//read stdin
-static void 
-worker_task (void *args, zctx_t *ctx, void *pipe)
+static void worker_task (void *args, zctx_t *ctx, void *pipe)
 {
+    // Send out heartbeats at regular intervals
     client_state* state = (client_state*) args;
     void *worker = zsocket_new (ctx, ZMQ_DEALER);
     zsocket_connect (worker, "inproc://backend");
@@ -187,7 +236,117 @@ worker_task (void *args, zctx_t *ctx, void *pipe)
     }
 }
 /////////////////////////////////////////////////////////////////////
-static void *
+static void 
+client_loop_frontend (client_state* state, void *frontend)
+{
+    zmq_msg_t zmessage;
+    while (1) {
+        // Process all parts of the message
+        //printf("RECEIVED  \n");
+        
+        zmq_msg_init (&zmessage);
+        zmq_msg_recv (&zmessage, frontend, 0);
+        
+        int more = zmq_msg_more (&zmessage);
+        
+        if(more)
+        {
+            zmq_msg_close (&zmessage);      
+            continue;
+        }
+        
+        zchat_message* message = zchat_message_deserialize_from_zmq_msg(&zmessage);
+        if(message == NULL)
+        {
+            zchat_log("Message deserialisation error");
+            zmq_msg_close (&zmessage);
+            return;
+        }
+        
+        if(message->type() == zchat_message_message_type_PONG)
+        {
+            process_pong_message(state, message);
+        }
+        
+        if(message->type() == zchat_message_message_type_PING)
+        {
+            client_state_reset_heartbeat(state);
+            client_state_set_heartbeat_time(state);
+            add_pong_message(state);
+        }
+        
+        client_state_reset_heartbeat(state);
+        client_state_set_heartbeat_time(state);
+        ECHO_2_STR("RECEIVED", message->ShortDebugString().c_str());
+        
+        zchat_message_destroy(message);
+        zmq_msg_close (&zmessage);
+        break; // Last message part
+    }
+}
+/////////////////////////////////////////////////////////////////////
+static void 
+client_loop_backend(client_state* state, void *backend)
+{
+    zmq_msg_t zmessage;
+    while (1)
+    {
+        // Process all parts of the message
+        zmq_msg_init (&zmessage);
+        zmq_msg_recv (&zmessage, backend, 0);
+        int more = zmq_msg_more (&zmessage);
+        
+        if(more)
+        {
+            zmq_msg_close (&zmessage);
+            continue;
+        }
+        
+        //char * data = (char *) zmq_msg_data(&zmessage);
+        //printf("sending %s\n", data);
+        
+        process_backend_message(state, &zmessage);
+        zmq_msg_close (&zmessage);
+        break;
+    }
+}
+/////////////////////////////////////////////////////////////////////
+static void 
+client_loop (client_state* state, void *frontend, void *backend)
+{
+    zmq_pollitem_t items [] = { { frontend, 0, ZMQ_POLLIN, 0 },
+                                { backend, 0, ZMQ_POLLIN, 0 } };
+    
+    client_state_set_heartbeat_time(state);
+    while (1) {
+        if(state->heartbeat_liveness <= 0)
+        {
+            //we dead
+            ECHO("Connection offline.");
+            return;
+        }
+        
+        //s_dump(frontend);
+        
+        zmq_poll (items, 2, -1);
+        if (items [0].revents & ZMQ_POLLIN)
+        {
+            client_loop_frontend(state,frontend);      
+        }
+        if (items [1].revents & ZMQ_POLLIN)
+        {
+            client_loop_backend(state, backend);           
+        }
+        
+        if(client_state_is_time_to_heartbeat(state) == true)
+        {
+            add_ping_message(state);
+        }
+        
+        send_outgoing_messages(state, frontend);
+    }
+}
+static void 
 client_task (void *args)
 {
     client_state* state = (client_state*) args;
@@ -199,82 +358,19 @@ client_task (void *args)
     zsocket_bind (backend, "inproc://backend");
     zthread_fork (state->context, worker_task, state);
     
-    zmq_pollitem_t items [] = { { frontend, 0, ZMQ_POLLIN, 0 },
-                                { backend, 0, ZMQ_POLLIN, 0 } };
+    client_loop(state, frontend, backend);
     
-    int counter = 0;
-    while (1) {
-        ++counter;
-        
-        
-        //printf("%d\n",counter);
-        //s_dump(frontend);
-        zmq_msg_t zmessage;
-        zmq_poll (items, 2, -1);
-        if (items [0].revents & ZMQ_POLLIN) {
-            while (1) {
-                // Process all parts of the message
-                printf("RECEIVED  \n");
-                zmq_msg_init (&zmessage);
-                zmq_msg_recv (&zmessage, frontend, 0);
-                int more = zmq_msg_more (&zmessage);
-                if(more){
-                    printf("GET MORE  \n");
-                }
-                //zmsg_dump(&message);
-                
-                //zmq_msg_send (&message, backend, more? ZMQ_SNDMORE: 0);
-                
-                if (!more){
-                    zchat_message message;
-                    char * data = (char *) zmq_msg_data(&zmessage);
-                    zmq_msg_close (&zmessage);
-                    message.ParseFromArray(data, strlen(data));
-                    ECHO_2_STR("RECEIVED", message.ShortDebugString().c_str());
-                    //printf("MESSAGE IS %s\n", data);  
-                    
-                    break; // Last message part
-                }     
-                zmq_msg_close (&zmessage);         
-                //zmsg_t *msg = zmsg_recv (frontend);
-                //                zframe_print (zmsg_last (msg), state->identity);
-            }
-        }
-        if (items [1].revents & ZMQ_POLLIN) {
-            while (1) {
-                // Process all parts of the message
-                zmq_msg_init (&zmessage);
-                zmq_msg_recv (&zmessage, backend, 0);
-                int more = zmq_msg_more (&zmessage);
-                
-                if(more)
-                {
-                    continue;
-                }
-                //char * data = (char *) zmq_msg_data(&zmessage);
-                //printf("sending %s\n", data);
-                
-                process_backend_message(state, &zmessage);
-                zmq_msg_close (&zmessage);
-                break;
-            }
-        }
-        
-        send_outgoing_messages(state, frontend);
-        
-    }
-    
+    zsocket_destroy(state->context, &frontend);
+    zsocket_destroy(state->context, &backend);
     zctx_destroy (&state->context);
-    return NULL;
 }
-
 /////////////////////////////////////////////////////////////////////
 void zchat_client_run(const char* server_url, const char* login)
 {
-    client_state * state = init_state(server_url, login);
+    client_state * state = client_state_init(server_url, login);
     
     client_task(state);
     
-    destroy_state(state);
+    client_state_destroy(state);
 }
 

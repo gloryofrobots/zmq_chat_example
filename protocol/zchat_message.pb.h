@@ -33,14 +33,13 @@ void protobuf_ShutdownFile_zchat_5fmessage_2eproto();
 class zchat_message;
 
 enum zchat_message_message_type {
-  zchat_message_message_type_HEARTBEAT = 1,
-  zchat_message_message_type_MESSAGE = 2,
-  zchat_message_message_type_RESPONSE = 3,
-  zchat_message_message_type_CONTACTS = 4
+  zchat_message_message_type_PING = 1,
+  zchat_message_message_type_PONG = 2,
+  zchat_message_message_type_MESSAGE = 3
 };
 bool zchat_message_message_type_IsValid(int value);
-const zchat_message_message_type zchat_message_message_type_message_type_MIN = zchat_message_message_type_HEARTBEAT;
-const zchat_message_message_type zchat_message_message_type_message_type_MAX = zchat_message_message_type_CONTACTS;
+const zchat_message_message_type zchat_message_message_type_message_type_MIN = zchat_message_message_type_PING;
+const zchat_message_message_type zchat_message_message_type_message_type_MAX = zchat_message_message_type_MESSAGE;
 const int zchat_message_message_type_message_type_ARRAYSIZE = zchat_message_message_type_message_type_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* zchat_message_message_type_descriptor();
@@ -108,10 +107,9 @@ class zchat_message : public ::google::protobuf::Message {
   // nested types ----------------------------------------------------
   
   typedef zchat_message_message_type message_type;
-  static const message_type HEARTBEAT = zchat_message_message_type_HEARTBEAT;
+  static const message_type PING = zchat_message_message_type_PING;
+  static const message_type PONG = zchat_message_message_type_PONG;
   static const message_type MESSAGE = zchat_message_message_type_MESSAGE;
-  static const message_type RESPONSE = zchat_message_message_type_RESPONSE;
-  static const message_type CONTACTS = zchat_message_message_type_CONTACTS;
   static inline bool message_type_IsValid(int value) {
     return zchat_message_message_type_IsValid(value);
   }
@@ -187,6 +185,22 @@ class zchat_message : public ::google::protobuf::Message {
   inline const ::google::protobuf::RepeatedPtrField< ::std::string>& receiver() const;
   inline ::google::protobuf::RepeatedPtrField< ::std::string>* mutable_receiver();
   
+  // repeated string users = 6;
+  inline int users_size() const;
+  inline void clear_users();
+  static const int kUsersFieldNumber = 6;
+  inline const ::std::string& users(int index) const;
+  inline ::std::string* mutable_users(int index);
+  inline void set_users(int index, const ::std::string& value);
+  inline void set_users(int index, const char* value);
+  inline void set_users(int index, const char* value, size_t size);
+  inline ::std::string* add_users();
+  inline void add_users(const ::std::string& value);
+  inline void add_users(const char* value);
+  inline void add_users(const char* value, size_t size);
+  inline const ::google::protobuf::RepeatedPtrField< ::std::string>& users() const;
+  inline ::google::protobuf::RepeatedPtrField< ::std::string>* mutable_users();
+  
   // @@protoc_insertion_point(class_scope:zchat_message)
  private:
   inline void set_has_type();
@@ -205,9 +219,10 @@ class zchat_message : public ::google::protobuf::Message {
   ::std::string* value_;
   ::std::string* sender_;
   ::google::protobuf::RepeatedPtrField< ::std::string> receiver_;
+  ::google::protobuf::RepeatedPtrField< ::std::string> users_;
   
   mutable int _cached_size_;
-  ::google::protobuf::uint32 _has_bits_[(5 + 31) / 32];
+  ::google::protobuf::uint32 _has_bits_[(6 + 31) / 32];
   
   friend void  protobuf_AddDesc_zchat_5fmessage_2eproto();
   friend void protobuf_AssignDesc_zchat_5fmessage_2eproto();
@@ -426,6 +441,50 @@ zchat_message::receiver() const {
 inline ::google::protobuf::RepeatedPtrField< ::std::string>*
 zchat_message::mutable_receiver() {
   return &receiver_;
+}
+
+// repeated string users = 6;
+inline int zchat_message::users_size() const {
+  return users_.size();
+}
+inline void zchat_message::clear_users() {
+  users_.Clear();
+}
+inline const ::std::string& zchat_message::users(int index) const {
+  return users_.Get(index);
+}
+inline ::std::string* zchat_message::mutable_users(int index) {
+  return users_.Mutable(index);
+}
+inline void zchat_message::set_users(int index, const ::std::string& value) {
+  users_.Mutable(index)->assign(value);
+}
+inline void zchat_message::set_users(int index, const char* value) {
+  users_.Mutable(index)->assign(value);
+}
+inline void zchat_message::set_users(int index, const char* value, size_t size) {
+  users_.Mutable(index)->assign(
+    reinterpret_cast<const char*>(value), size);
+}
+inline ::std::string* zchat_message::add_users() {
+  return users_.Add();
+}
+inline void zchat_message::add_users(const ::std::string& value) {
+  users_.Add()->assign(value);
+}
+inline void zchat_message::add_users(const char* value) {
+  users_.Add()->assign(value);
+}
+inline void zchat_message::add_users(const char* value, size_t size) {
+  users_.Add()->assign(reinterpret_cast<const char*>(value), size);
+}
+inline const ::google::protobuf::RepeatedPtrField< ::std::string>&
+zchat_message::users() const {
+  return users_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::std::string>*
+zchat_message::mutable_users() {
+  return &users_;
 }
 
 

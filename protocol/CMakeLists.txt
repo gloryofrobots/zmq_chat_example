@@ -9,7 +9,8 @@ set(PROTO_HEADER ${PROTO_HEADER} PARENT_SCOPE)
 set(PROTO_SRCS
     ${PROTO_SRCS}
     "zchat_message.h"
-    "zchat_types.h")
+    "zchat_types.h"
+    "utils.h")
                             
 ADD_LIBRARY( ${MY_LIB_NAME} ${PROTO_SRCS} ${PROTO_HDRS} )
 TARGET_LINK_LIBRARIES(${MY_LIB_NAME} ${PROTOBUF_LIBRARIES} )

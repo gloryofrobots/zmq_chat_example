@@ -13,6 +13,11 @@
 #include "zchat_identity.h"
 #include "zchat_message.h"
 
+#define HEARTBEAT_LIVENESS 3 // 3-5 is reasonable
+#define HEARTBEAT_INTERVAL 1000 // msecs
+#define HEARTBEAT_INTERVAL_INIT 1000 // Initial reconnect
+#define HEARTBEAT_INTERVAL_MAX 32000 
+
 typedef std::vector<zchat_identity *> zchat_identitylist_t;
 
 typedef std::map<zchat_string_t, zchat_identity *> zchat_clientmap_t;
@@ -22,10 +27,11 @@ struct server_state
     zctx_t* context;
     zchat_identitylist_t identities;
     zchat_clientmap_t clients;
+    
     const char * server_url;
 };
 
-server_state* init_state(const char * server_url)
+server_state* client_state_init(const char * server_url)
 {
     srand(time(0));
     server_state * state = new server_state();
@@ -34,7 +40,7 @@ server_state* init_state(const char * server_url)
     return state;
 }
 
-void destroy_state(server_state* state)
+void client_state_destroy(server_state* state)
 {
     zctx_destroy(&state->context);
     
@@ -46,7 +52,7 @@ void destroy_state(server_state* state)
         zchat_identity_destroy(it->second);
     }
     
-    free(state);
+    delete state;
 }
 
 void send_message(void * socket, zchat_identity* identity, zchat_message * message)
@@ -145,13 +151,7 @@ server_worker (void *args, zctx_t *ctx, void *pipe)
     void *worker = zsocket_new (ctx, ZMQ_DEALER);
     zsocket_connect (worker, "inproc://backend");
     
-    zchat_identitylist_t recipients;
-    zchat_string_t serialised;
-    
     while (true) {
-        recipients.clear();
-        serialised.clear();
-        
         // The DEALER socket gives us the reply envelope and message
         zmsg_t *msg = zmsg_recv (worker);
         zframe_t *identity = zmsg_pop (msg);
@@ -168,6 +168,10 @@ server_worker (void *args, zctx_t *ctx, void *pipe)
         case zchat_message_message_type_MESSAGE:
             server_worker_process_message(state, worker, message);
             break; 
+        
+        case zchat_message_message_type_PING:
+            server_worker_process_message_ping(state, worker, message);
+            break;
             
         default:
             zchat_log("UNKNOWN MESSAGE TYPE %d", message->type());
@@ -261,9 +265,9 @@ void *server_task (void *args)
 
 void run_server (const char * server_url)
 {
-    server_state * state = init_state(server_url);
+    server_state * state = client_state_init(server_url);
     server_task(state);
-    destroy_state(state);
+    client_state_destroy(state);
 }
 
 

@@ -30,12 +30,13 @@ void protobuf_AssignDesc_zchat_5fmessage_2eproto() {
       "zchat_message.proto");
   GOOGLE_CHECK(file != NULL);
   zchat_message_descriptor_ = file->message_type(0);
-  static const int zchat_message_offsets_[5] = {
+  static const int zchat_message_offsets_[6] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(zchat_message, type_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(zchat_message, incoming_id_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(zchat_message, value_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(zchat_message, sender_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(zchat_message, receiver_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(zchat_message, users_),
   };
   zchat_message_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -79,12 +80,12 @@ void protobuf_AddDesc_zchat_5fmessage_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\023zchat_message.proto\"\310\001\n\rzchat_message\022"
+    "\n\023zchat_message.proto\"\300\001\n\rzchat_message\022"
     ")\n\004type\030\001 \002(\0162\033.zchat_message.message_ty"
     "pe\022\023\n\013incoming_id\030\002 \002(\005\022\r\n\005value\030\003 \001(\t\022\016"
-    "\n\006sender\030\004 \001(\t\022\020\n\010receiver\030\005 \003(\t\"F\n\014mess"
-    "age_type\022\r\n\tHEARTBEAT\020\001\022\013\n\007MESSAGE\020\002\022\014\n\010"
-    "RESPONSE\020\003\022\014\n\010CONTACTS\020\004", 224);
+    "\n\006sender\030\004 \001(\t\022\020\n\010receiver\030\005 \003(\t\022\r\n\005user"
+    "s\030\006 \003(\t\"/\n\014message_type\022\010\n\004PING\020\001\022\010\n\004PON"
+    "G\020\002\022\013\n\007MESSAGE\020\003", 216);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "zchat_message.proto", &protobuf_RegisterTypes);
   zchat_message::default_instance_ = new zchat_message();
@@ -111,7 +112,6 @@ bool zchat_message_message_type_IsValid(int value) {
     case 1:
     case 2:
     case 3:
-    case 4:
       return true;
     default:
       return false;
@@ -119,10 +119,9 @@ bool zchat_message_message_type_IsValid(int value) {
 }
 
 #ifndef _MSC_VER
-const zchat_message_message_type zchat_message::HEARTBEAT;
+const zchat_message_message_type zchat_message::PING;
+const zchat_message_message_type zchat_message::PONG;
 const zchat_message_message_type zchat_message::MESSAGE;
-const zchat_message_message_type zchat_message::RESPONSE;
-const zchat_message_message_type zchat_message::CONTACTS;
 const zchat_message_message_type zchat_message::message_type_MIN;
 const zchat_message_message_type zchat_message::message_type_MAX;
 const int zchat_message::message_type_ARRAYSIZE;
@@ -133,6 +132,7 @@ const int zchat_message::kIncomingIdFieldNumber;
 const int zchat_message::kValueFieldNumber;
 const int zchat_message::kSenderFieldNumber;
 const int zchat_message::kReceiverFieldNumber;
+const int zchat_message::kUsersFieldNumber;
 #endif  // !_MSC_VER
 
 zchat_message::zchat_message()
@@ -209,6 +209,7 @@ void zchat_message::Clear() {
     }
   }
   receiver_.Clear();
+  users_.Clear();
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
 }
@@ -303,6 +304,24 @@ bool zchat_message::MergePartialFromCodedStream(
           goto handle_uninterpreted;
         }
         if (input->ExpectTag(42)) goto parse_receiver;
+        if (input->ExpectTag(50)) goto parse_users;
+        break;
+      }
+      
+      // repeated string users = 6;
+      case 6: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_users:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->add_users()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+            this->users(0).data(), this->users(0).length(),
+            ::google::protobuf::internal::WireFormat::PARSE);
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(50)) goto parse_users;
         if (input->ExpectAtEnd()) return true;
         break;
       }
@@ -363,6 +382,15 @@ void zchat_message::SerializeWithCachedSizes(
       5, this->receiver(i), output);
   }
   
+  // repeated string users = 6;
+  for (int i = 0; i < this->users_size(); i++) {
+  ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+    this->users(i).data(), this->users(i).length(),
+    ::google::protobuf::internal::WireFormat::SERIALIZE);
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      6, this->users(i), output);
+  }
+  
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -411,6 +439,15 @@ void zchat_message::SerializeWithCachedSizes(
       WriteStringToArray(5, this->receiver(i), target);
   }
   
+  // repeated string users = 6;
+  for (int i = 0; i < this->users_size(); i++) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8String(
+      this->users(i).data(), this->users(i).length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE);
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteStringToArray(6, this->users(i), target);
+  }
+  
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -457,6 +494,13 @@ int zchat_message::ByteSize() const {
       this->receiver(i));
   }
   
+  // repeated string users = 6;
+  total_size += 1 * this->users_size();
+  for (int i = 0; i < this->users_size(); i++) {
+    total_size += ::google::protobuf::internal::WireFormatLite::StringSize(
+      this->users(i));
+  }
+  
   if (!unknown_fields().empty()) {
     total_size +=
       ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
@@ -483,6 +527,7 @@ void zchat_message::MergeFrom(const ::google::protobuf::Message& from) {
 void zchat_message::MergeFrom(const zchat_message& from) {
   GOOGLE_CHECK_NE(&from, this);
   receiver_.MergeFrom(from.receiver_);
+  users_.MergeFrom(from.users_);
   if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     if (from.has_type()) {
       set_type(from.type());
@@ -525,6 +570,7 @@ void zchat_message::Swap(zchat_message* other) {
     std::swap(value_, other->value_);
     std::swap(sender_, other->sender_);
     receiver_.Swap(&other->receiver_);
+    users_.Swap(&other->users_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

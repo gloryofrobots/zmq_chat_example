@@ -1,9 +1,8 @@
 message zchat_message {
   enum message_type {
-    HEARTBEAT = 1;
-    MESSAGE = 2;
-    RESPONSE = 3;
-    CONTACTS = 4;
+    PING = 1;
+    PONG = 2;
+    MESSAGE = 3;
   }
 
   required message_type type = 1;
@@ -12,4 +11,5 @@ message zchat_message {
   optional string value = 3;
   optional string sender = 4;
   repeated string receiver = 5;
+  repeated string users = 6;
 }
