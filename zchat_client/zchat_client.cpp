@@ -1,18 +1,19 @@
 #include <string>
 #include <pthread.h>
-#include "czmq.h"
+
 
 #include "zmqhelpers.h"
-#include "message.pb.h"
-#include "zchat_client.h"
 
+#include "zchat_client.h"
+#include "zchat_message.h"
+#include "zchat_types.h"
 #include <list>
 #include <vector>
 #define LINE_SIZE 255
 #define IDENTITY_SIZE 20
 
-typedef  std::string TString;
-typedef  std::vector<Message*> TMessageQueue;
+
+
 /////////////////////////////////////////////////////////////////////
 struct client_state
 {
@@ -20,8 +21,8 @@ struct client_state
     char identity[IDENTITY_SIZE];
     const char * server_url;
     const char * login;
-    TMessageQueue* in_messages;
-    TMessageQueue* out_messages;
+    zchat_message_vector_t* in_messages;
+    zchat_message_vector_t* out_messages;
     
     int last_message_id;
 };
@@ -33,8 +34,8 @@ client_state* init_state(const char* server_url, const char* login)
     state->last_message_id = 0;
     state->context = zctx_new ();
     state->login = login;
-    state->in_messages = new TMessageQueue();
-    state->out_messages = new TMessageQueue();
+    state->in_messages = new zchat_message_vector_t();
+    state->out_messages = new zchat_message_vector_t();
     // Set random identity to make tracing easier
     sprintf (state->identity, "%04X-%04X", randof (0x10000), randof (0x10000));
     state->server_url = server_url;
@@ -69,14 +70,14 @@ void get_line(char * input, int size)
 }
 
 static void
-set_message_id(client_state* state, Message& message)
+set_message_id(client_state* state, zchat_message& message)
 {
     message.set_incoming_id(++state->last_message_id);
     //state->last_message_id++;
 }
 
 static void
-serialize_message_to_string(Message * message, TString* out)
+serialize_message_to_string(zchat_message * message, zchat_string_t* out)
 {
     message->SerializeToString(out);
 }
@@ -84,101 +85,87 @@ serialize_message_to_string(Message * message, TString* out)
 void send_outgoing_messages(client_state* state, void * socket)
 {
     
-    for(TMessageQueue::iterator 
+    for(zchat_message_vector_t::iterator 
         it = state->out_messages->begin();
         it != state->out_messages->end();
-         it++)
-        {
-            TString serialised;
-            Message * message = *it;
-            serialize_message_to_string(message, &serialised);
-            zframe_t* content = zframe_new (serialised.c_str(),
+        it++)
+    {
+        zchat_string_t serialised;
+        zchat_message * message = *it;
+        serialize_message_to_string(message, &serialised);
+        zframe_t* content = zframe_new (serialised.c_str(),
                                         serialised.length());
-            
-            zclock_sleep (randof (1000) + 1);
         
-            zframe_send (&content, socket, ZFRAME_REUSE);
-            zframe_destroy (&content);
+        zclock_sleep (randof (1000) + 1);
         
-            /*ECHO("SENDING");
+        zframe_send (&content, socket, ZFRAME_REUSE);
+        zframe_destroy (&content);
+        
+        /*ECHO("SENDING");
                 int rc = zmq_msg_send (&zmessage, frontend, more? ZMQ_SNDMORE: 0);
                 if(rc == -1)
                 {
                     zmqlog("zmq_msg_send");
                 }*/
-        }
-        
-        state->out_messages->clear();
-}
-///////////////////////////////////////////
-Message * deserialize_message(zmq_msg_t* zmessage)
-{
-    Message* message = new Message();
-    char * data = (char *) zmq_msg_data(zmessage);
-    message->ParseFromArray(data, strlen(data));
-    return message;
-}
-///////////////////////////////////////////
-void destroy_message(Message * message)
-{
-    delete message;
+    }
+    
+    state->out_messages->clear();
 }
 /////////////////////////////////////////////////////////////////////
-void add_outgoing_message(client_state* state, Message * message)
+void add_outgoing_message(client_state* state, zchat_message * message)
 {
     state->out_messages->push_back(message);
 }
 /////////////////////////////////////////////////////////////////////
-void add_incoming_message(client_state* state, Message * message)
+void add_incoming_message(client_state* state, zchat_message * message)
 {
     state->in_messages->push_back(message);
 }
 /////////////////////////////////////////////////////////////////////
 void process_backend_message(client_state* state, zmq_msg_t* zmessage)
 {
-    Message * message = deserialize_message(zmessage);
+    zchat_message * message = zchat_message_deserialize_from_zmq_msg(zmessage);
     add_outgoing_message(state, message);
     ECHO_2_STR("process_backend_message", message->ShortDebugString().c_str());
-       
+    
 }
 /////////////////////////////////////////////////////////////////////
 void process_frontend_message(client_state* state, zmq_msg_t* zmessage)
 {
-    Message * message = deserialize_message(zmessage);
+    zchat_message * message = zchat_message_deserialize_from_zmq_msg(zmessage);
     add_incoming_message(state, message);
     ECHO_2_STR("process_frontend_message", message->ShortDebugString().c_str());
 }
 /////////////////////////////////////////////////////////////////////
 static void
-get_serialised_message_from_stdin(client_state* state, TString* data)
+get_serialised_message_from_stdin(client_state* state, zchat_string_t* data)
 {   
     char input[LINE_SIZE] = {'\0'};
     
-    //get_line(input, LINE_SIZE);
+    get_line(input, LINE_SIZE);
     
-    Message message;
+    zchat_message message;
     set_message_id(state, message);
     
-    message.set_type(Message_MessageType_MESSAGE);
-    //message.set_value(input);
-    message.set_value("OLOLOLOLOLO");
+    message.set_type(zchat_message_message_type_MESSAGE);
+    message.set_value(input);
+    //message.set_value("OLOLOLOLOLO");
     message.set_sender(state->login);
     message.SerializeToString(data);
     const char * ds = message.ShortDebugString().c_str();
     ECHO(ds);
 }
-
+/////////////////////////////////////////////////////////////////////
 zframe_t* get_frame_from_stdin(client_state* state)
 {
-    TString serialisedMessage;
+    zchat_string_t serialisedMessage;
     get_serialised_message_from_stdin(state, &serialisedMessage);
     zframe_t* content = zframe_new (serialisedMessage.c_str(),
-                                        serialisedMessage.length());
+                                    serialisedMessage.length());
     
-    const char * data = serialisedMessage.c_str();
+    //const char * data = serialisedMessage.c_str();
     return content;
 }
-
 /////////////////////////////////////////////////////////////////////
 //read stdin
 static void 
@@ -214,10 +201,12 @@ client_task (void *args)
     
     zmq_pollitem_t items [] = { { frontend, 0, ZMQ_POLLIN, 0 },
                                 { backend, 0, ZMQ_POLLIN, 0 } };
-   
+    
     int counter = 0;
     while (1) {
         ++counter;
+        
+        
         //printf("%d\n",counter);
         //s_dump(frontend);
         zmq_msg_t zmessage;
@@ -225,6 +214,7 @@ client_task (void *args)
         if (items [0].revents & ZMQ_POLLIN) {
             while (1) {
                 // Process all parts of the message
+                printf("RECEIVED  \n");
                 zmq_msg_init (&zmessage);
                 zmq_msg_recv (&zmessage, frontend, 0);
                 int more = zmq_msg_more (&zmessage);
@@ -235,11 +225,8 @@ client_task (void *args)
                 
                 //zmq_msg_send (&message, backend, more? ZMQ_SNDMORE: 0);
                 
-                
-                
-                
                 if (!more){
-                    Message message;
+                    zchat_message message;
                     char * data = (char *) zmq_msg_data(&zmessage);
                     zmq_msg_close (&zmessage);
                     message.ParseFromArray(data, strlen(data));
@@ -264,7 +251,9 @@ client_task (void *args)
                 {
                     continue;
                 }
-                char * data = (char *) zmq_msg_data(&zmessage);
+                //char * data = (char *) zmq_msg_data(&zmessage);
+                //printf("sending %s\n", data);
+                
                 process_backend_message(state, &zmessage);
                 zmq_msg_close (&zmessage);
                 break;

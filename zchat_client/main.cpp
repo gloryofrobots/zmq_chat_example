@@ -1,11 +1,22 @@
+# define randof(num) (int) ((float) (num) * random () / (RAND_MAX + 1.0))
+
 #include <iostream>
 #include <fstream>
-
+#include <cstdlib>
 #include "zchat_client.h"
 
-int main() 
+int main(int argc, char **argv) 
 {
-    zchat_client_run("tcp://localhost:5570", "Bob");
+    /*if(argc != 3)
+    {
+        printf("USAGE: program_name port login\n");
+    }*/
+   
+    srand(time(0));
+    char login[20] = {'\0'};
+    sprintf (login, "%04X-%04X-%04X-%04X", randof (0x10000), randof (0x10000),randof (0x10000),randof (0x10000));
+   
+    zchat_client_run("tcp://localhost:5570", login);
 }
 
 //static void *

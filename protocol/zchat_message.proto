@@ -1,0 +1,15 @@
+message zchat_message {
+  enum message_type {
+    HEARTBEAT = 1;
+    MESSAGE = 2;
+    RESPONSE = 3;
+    CONTACTS = 4;
+  }
+
+  required message_type type = 1;
+  required int32 incoming_id = 2;
+
+  optional string value = 3;
+  optional string sender = 4;
+  repeated string receiver = 5;
+}

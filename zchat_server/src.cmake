@@ -1,9 +1,11 @@
 
 set(SOURCES 
     "main.cpp"
-    "ex.h"
-    "async.h"
-    "async2.h"
+    #"ex.h"
+    "utils.h"
+    "zchat_identity.h"
+    #"async.h"
+    #"async2.h"
     "zchat_server.h"
-    "zchat_server.cpp"
+    #"zchat_server.cpp"
     )
