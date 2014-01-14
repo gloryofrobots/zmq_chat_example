@@ -78,7 +78,8 @@ void client_state_set_heartbeat_time(client_state* state)
 /////////////////////////////////////////////////////////////////////
 bool client_state_is_time_to_heartbeat(client_state* state)
 {
-    return zclock_time() > state->heartbeat_interval;
+    //printf("HEARTBEAT %lld, %lld \n",zclock_time(),state->heartbeat_interval);
+    return zclock_time() > state->heartbeat_time;
 }
 /////////////////////////////////////////////////////////////////////
 zchat_message * zchat_message_new_for_sender(client_state* state, zchat_message_message_type type)
@@ -265,11 +266,13 @@ client_loop_frontend (client_state* state, void *frontend)
         
         if(message->type() == zchat_message_message_type_PONG)
         {
+            //ECHO_2_STR("PONG", message->ShortDebugString().c_str());;
             process_pong_message(state, message);
         }
         
         if(message->type() == zchat_message_message_type_PING)
         {
+            //ECHO_2_STR("PING", message->ShortDebugString().c_str());
             client_state_reset_heartbeat(state);
             client_state_set_heartbeat_time(state);
             add_pong_message(state);

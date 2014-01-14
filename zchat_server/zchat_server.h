@@ -100,6 +100,15 @@ void send_message_to_all(server_state * state,
     }
 }
 
+
+void server_worker_process_message_ping(server_state * state,
+                                   void * socket,
+                                   zchat_message * message)
+{
+    message->set_type(zchat_message_message_type_PONG);
+    send_message_to_recipient(state, socket, message->sender(), message);
+}
+
 void server_worker_process_message(server_state * state,
                                    void * socket,
                                    zchat_message * message)
@@ -132,6 +141,7 @@ add_client_from_message(server_state * state, zframe_t * identity_frame, zchat_m
         zchat_identity* old_identity = it->second;
         if(zchat_identity_is_equals(old_identity, identity_data, identity_size) == true)
         {   
+            zchat_identity_reset_liveness(old_identity);
             return;
         }
         
@@ -161,8 +171,10 @@ server_worker (void *args, zctx_t *ctx, void *pipe)
         zmsg_destroy (&msg);
         
         zchat_message * message = zchat_message_deserialize_from_zframe(content);
+        
         add_client_from_message(state, identity, message);
         zclock_sleep (randof (1000) + 1);
+        
         switch(message->type())
         {
         case zchat_message_message_type_MESSAGE:
@@ -219,7 +231,7 @@ void *server_task (void *args)
         zmq_poll (items, 2, -1);
         if (items [0].revents & ZMQ_POLLIN) {
             while (1) {
-                ECHO("SERVER FRONTEND");
+                //ECHO("SERVER FRONTEND");
                 // Process all parts of the message
                 zmq_msg_init (&message);
                 zmq_msg_recv (&message, frontend, 0);
@@ -233,7 +245,7 @@ void *server_task (void *args)
         }
         if (items [1].revents & ZMQ_POLLIN) {
             while (1) {
-                ECHO("SERVER BACKAND");
+                //ECHO("SERVER BACKAND");
                 // Process all parts of the message
                 zmq_msg_init (&message);
                 zmq_msg_recv (&message, backend, 0);

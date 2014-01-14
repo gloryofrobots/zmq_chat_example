@@ -2,7 +2,6 @@
 set(SOURCES 
     "main.cpp"
     #"ex.h"
-    "utils.h"
     "zchat_identity.h"
     #"async.h"
     #"async2.h"
